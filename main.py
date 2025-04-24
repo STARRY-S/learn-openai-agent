@@ -1,17 +1,15 @@
 import asyncio
-import logging
-from openai.types.responses import ResponseTextDeltaEvent
 from agents import Agent, Runner, OpenAIChatCompletionsModel, AsyncOpenAI
-from agents import set_default_openai_client
 from agents.mcp import MCPServerStdio
 
-logger = logging.getLogger("openai.agents.tracing")
-logger.setLevel(logging.INFO)
+from agents import set_tracing_disabled
+set_tracing_disabled(True)
 
 async def main():
-    custom_client = AsyncOpenAI(base_url="http://ollama.hxstarrys.me/v1")
-    set_default_openai_client(custom_client)
-
+    custom_client = AsyncOpenAI(
+        base_url="http://ollama.hxstarrys.me/v1",
+        api_key="ollama"
+    )
     async with MCPServerStdio(
         params={
             "command": "kube-helper-mcp",
@@ -33,12 +31,18 @@ async def main():
     async with mcp_server:
         agent = Agent(
             name="KubeAssisstant",
-            instructions="You are a helpful kubernetes assistant",
+            instructions="You are a kubernetes assistant, "
+            "you can use the data provided by MCP server to answer questions, "
+            "translate the results into human readable markdown text format.",
             model=model,
             mcp_servers=[mcp_server]
         )
 
-        result = await Runner.run(agent, "List deployments in all namespaces.")
+        result = await Runner.run(
+            agent,
+            input="List deployments in the `ai` namespaces.",
+        )
+        print("Result:")
         print(result.final_output)
 
 if __name__ == "__main__":
